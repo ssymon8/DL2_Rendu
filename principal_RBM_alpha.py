@@ -16,7 +16,9 @@ def lire_alpha_digits(indices= [], path = 'data/Binary_Alpha_Digits/binaryalphad
     
     return torch.tensor(X, dtype=torch.float32)
 
-def init_RBM(n_visible= 1, n_hidden=1):
+# Les images du Binary Alpha Digits sont de taille 20x16, soit 320 pixels.
+# Ce qui nous impose 320 unités visibles dans notre cas
+def init_RBM(n_visible= 320, n_hidden=100):
     W = torch.randn(n_visible, n_hidden) * 0.01
     a = torch.zeros(n_visible)
     b = torch.zeros(n_hidden)
