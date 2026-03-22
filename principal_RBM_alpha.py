@@ -14,7 +14,7 @@ def lire_alpha_digits(indices= [], path = 'data/Binary_Alpha_Digits/binaryalphad
         for j in range(dat.shape[1]):
             X.append(dat[i,j].flatten())
     
-    return torch.tensor(X, dtype=torch.float32)
+    return torch.tensor(np.array(X), dtype=torch.float32)
 
 # Les images du Binary Alpha Digits sont de taille 20x16, soit 320 pixels.
 # Ce qui nous impose 320 unités visibles dans notre cas
@@ -62,7 +62,12 @@ def train_RBM(rbm, epochs, learning_rate, batch_size, data):
             rbm['a'] += learning_rate * torch.mean(batch - visible_states, dim=0)
             rbm['b'] += learning_rate * torch.mean(hidden_probabilities - hidden_probabilities_neg, dim=0)
 
-        print(f'Epoch {epoch+1}/{epochs}.\n Erreur quadratique entrée/reconstruction : {torch.mean((data - visible_probabilities) ** 2).item():.4f}')
+        #évaluation de l'erreur quadratique moyenne entre les données d'entrée et les données reconstruites
+        sortie_cachee = entree_sortie_RBM(data, rbm)
+        donnees_reconstruites = sortie_entree_RBM(sortie_cachee, rbm)
+        erreur = torch.mean((data - donnees_reconstruites) ** 2).item()
+
+        print(f'Epoch {epoch+1}/{epochs}.\n Erreur quadratique entrée/reconstruction : {erreur:.4f}')
 
     return rbm
 

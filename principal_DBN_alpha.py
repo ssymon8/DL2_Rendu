@@ -17,13 +17,26 @@ def train_DBN(dbn, epochs, learning_rate, batch_size, data):
 
 def generer_image_DBN(dbn, n_iterations=1000, n_images=1):
     images = []
+    # On isole le RBM supérieur pour l'échantillonnage de Gibbs
+    top_rbm = dbn[-1]
+    
     for _ in range(n_images):
-        visible = torch.rand(1, dbn[0]['W'].shape[0])
-        for rbm in dbn:
-            for _ in range(n_iterations):
-                hidden_probabilities = rbm_module.entree_sortie_RBM(visible, rbm)
-                hidden_states = (hidden_probabilities > torch.rand_like(hidden_probabilities)).float()
-                visible_probabilities = rbm_module.sortie_entree_RBM(hidden_states, rbm)
-                visible = (visible_probabilities > torch.rand_like(visible_probabilities)).float()
-        images.append(visible)
+        # Initialisation aléatoire sur la couche visible du RBM supérieur
+        v = torch.rand(1, top_rbm['W'].shape[0])
+        
+        # 1. Échantillonnage de Gibbs sur le RBM supérieur
+        for _ in range(n_iterations):
+            h_prob = rbm_module.entree_sortie_RBM(v, top_rbm)
+            h_state = (h_prob > torch.rand_like(h_prob)).float()
+            
+            v_prob = rbm_module.sortie_entree_RBM(h_state, top_rbm)
+            v = (v_prob > torch.rand_like(v_prob)).float()
+        
+        # On parcourt le réseau à l'envers, en excluant le top_rbm déjà traité
+        for rbm in reversed(dbn[:-1]):
+            v_prob = rbm_module.sortie_entree_RBM(v, rbm)
+            v = (v_prob > torch.rand_like(v_prob)).float()
+        
+        images.append(v.reshape(20, 16))
+        
     return images
