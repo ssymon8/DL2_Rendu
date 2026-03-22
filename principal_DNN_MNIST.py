@@ -22,9 +22,9 @@ def pretrain_DNN(dnn, epochs, learning_rate, batch_size, data):
     return dnn
 
 def calcul_softmax(rbm, input_data):
-    with torch.no_grad():
-        hidden_probabilities = rbm_module.entree_sortie_RBM(input_data, rbm)
-        return torch.softmax(hidden_probabilities, dim=1)
+    logits = torch.matmul(input_data, rbm['W']) + rbm['b']
+    probas = torch.softmax(logits, dim=1)
+    return probas
     
 def entree_sortie_reseau(dnn, input_data):
     sorties = [input_data]
