@@ -5,7 +5,7 @@ from torchvision import datasets
 import principal_DNN_MNIST as dnn_module
 import copy
 
-def lire_et_binariser_mnist(chemin='./data'):
+def lire_et_binariser_mnist(chemin='./data/MNIST/archive'):
     print("Chargement et binarisation de MNIST...")
     train_set = datasets.MNIST(root=chemin, train=True, download=True)
     test_set = datasets.MNIST(root=chemin, train=False, download=True)
