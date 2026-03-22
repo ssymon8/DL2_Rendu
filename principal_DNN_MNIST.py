@@ -39,50 +39,55 @@ def entree_sortie_reseau(dnn, input_data):
     return sorties
 
 def retropropagation(dnn, epochs, learning_rate, batch_size, data, labels):
-    criterion = nn.CrossEntropyLoss()
-    # on pourrait utiliser AdamW mais ce sera trop puissant pour voir l'intérêt de la rétropropagation
-    optimizer = optim.SGD(dnn[-1]['W'].parameters(), lr=learning_rate)
-
-    params_to_optimize = []
-    for layer in dnn:
-        layer['W'].requires_grad_(True)
-        layer['b'].requires_grad_(True)
-        params_to_optimize.extend([layer['W'], layer['b']])
     
     n_samples = data.shape[0]
     
     for epoch in range(epochs):
-        #forward pass par batch de données
         for i in range(0, n_samples, batch_size):
             batch_data = data[i:i+batch_size]
             batch_labels = labels[i:i+batch_size]
-            
-            sorties = entree_sortie_reseau(dnn, batch_data)
-            loss = criterion(sorties[-1], batch_labels)
-            
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
 
-        # on regarde l'entropie croisée sur l'ensemble des données à la fin
-        # de chaque epoch pour voir l'évolution de la perte
-        with torch.no_grad():
-            probas = entree_sortie_reseau(dnn, data)[-1]
-            loss = criterion(probas, labels)
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
-    
-    for layer in dnn:
-        layer['W'].requires_grad_(False)
-        layer['b'].requires_grad_(False)
+            # Forward pass
+            sorties= entree_sortie_reseau(dnn, batch_data)
+            probas = sorties[-1]
+
+            #Gradient de la couche de classification (softmax)
+            dZ = probas - batch_labels
+
+            dW= sorties[-2].t() @ dZ / batch_size
+            db = torch.mean(dZ, dim=0)
+
+            dA = dZ @ dnn[-1]['W'].t()
+
+            # Mise à jour de la couche de classification
+            dnn[-1]['W'] -= learning_rate * dW
+            dnn[-1]['b'] -= learning_rate * db
+
+            #Rétropropagation à travers les couches RBM
+            for j in range(len(dnn) - 2, -1, -1):
+                A= sorties[j+1]
+                dZ = dA * A * (1 - A)
+
+                dW = sorties[j].t() @ dZ / batch_size
+                db = torch.mean(dZ, dim=0)
+                dA = dZ @ dnn[j]['W'].t()
+
+                dnn[j]['W'] -= learning_rate * dW
+                dnn[j]['b'] -= learning_rate * db
+        
+        probas_totales = entree_sortie_reseau(dnn, data)[-1]
+        loss = -torch.mean(torch.sum(labels * torch.log(probas_totales + 1e-8), dim=1)).item()
+        print(f'Epoch {epoch+1}/{epochs}.\n Loss: {loss:.4f}')
 
     return dnn
 
 def test_DNN(dnn, data, labels):
-    with torch.no_grad():
-        probas = entree_sortie_reseau(dnn, data)[-1]
-        predicted_labels = torch.argmax(probas, dim=1)
-        taux_erreur = (predicted_labels == labels).float().mean().item()
-    print(f"Test Accuracy: {taux_erreur * 100:.2f}%")
+    probas = entree_sortie_reseau(dnn, data)[-1]
+    predictions = torch.argmax(probas, dim=1)
+    labels_indices = torch.argmax(labels, dim=1)
+    taux_erreur = (predictions != labels_indices).float().mean().item()
+
+    print(f'Taux d\'erreur sur le test : {taux_erreur:.4f}')
 
     return taux_erreur
 
